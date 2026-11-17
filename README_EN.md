@@ -12,6 +12,7 @@ zig-so-example/
 ├── include/zigmath.h      # Hand-written C header
 ├── CMakeLists.txt         # Wraps the C program: triggers `zig build` and links the .so
 ├── c/main.c               # Example C caller
+├── c/main.cpp             # Example C++ caller (verifies the extern "C" header)
 ├── cmake-build/           # CMake build directory
 └── zig-out/               # Zig build output
     ├── include/zigmath.h
@@ -38,6 +39,7 @@ Outputs:
 cmake -S . -B cmake-build -DCMAKE_BUILD_TYPE=Release
 cmake --build cmake-build -j
 ./cmake-build/zigmath_demo
+./cmake-build/zigmath_demo_cpp   # C++ caller, same output except "C++ caller"
 ```
 
 Install (optional):
@@ -45,9 +47,10 @@ Install (optional):
 ```bash
 cmake --install cmake-build --prefix /path/to/prefix
 /path/to/prefix/bin/zigmath_demo
+/path/to/prefix/bin/zigmath_demo_cpp
 ```
 
-The installed files are `bin/zigmath_demo`, `lib/libzigmath.so` and `include/zigmath.h`.
+The installed files are `bin/zigmath_demo`, `bin/zigmath_demo_cpp`, `lib/libzigmath.so` and `include/zigmath.h`.
 
 ## Or compile and run the C program directly with gcc
 
@@ -76,6 +79,32 @@ You can also set the runtime library path explicitly:
 ```bash
 LD_LIBRARY_PATH=zig-out/lib ./c/main
 ```
+
+## Calling from C++
+
+The header wraps its declarations in `#ifdef __cplusplus extern "C" { ... }`, so a C++ program can include it and link against this C-ABI shared library directly:
+
+```bash
+g++ c/main.cpp \
+  -Izig-out/include \
+  -Lzig-out/lib \
+  -lzigmath \
+  -Wl,-rpath,'$ORIGIN/../zig-out/lib' \
+  -o c/main_cpp
+
+./c/main_cpp
+```
+
+Expected output (only the last line differs, with `C++ caller`):
+
+```
+zigmath version: 1
+10 + 20 = 30
+sum([1..5]) = 15
+Hello, C++ caller! This string came from Zig.
+```
+
+The string returned by `zm_greet` is allocated by Zig's `c_allocator`; the example uses `std::unique_ptr` with `zm_string_free` as a custom deleter so it is always released.
 
 ## Or compile from the command line without build.zig
 

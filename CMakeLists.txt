@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 
 project(zigmath_demo
     VERSION 0.1.0
-    LANGUAGES C
+    LANGUAGES C CXX
 )
 
 # ---------------------------------------------------------------------------
@@ -37,25 +37,29 @@ set_target_properties(zigmath PROPERTIES
 )
 
 # ---------------------------------------------------------------------------
-# 3) C 可执行程序
+# 3) C / C++ 可执行程序
 # ---------------------------------------------------------------------------
 add_executable(zigmath_demo c/main.c)
+add_executable(zigmath_demo_cpp c/main.cpp)
 add_dependencies(zigmath_demo zig_library)
+add_dependencies(zigmath_demo_cpp zig_library)
 
-target_link_libraries(zigmath_demo PRIVATE zigmath)
-target_include_directories(zigmath_demo PRIVATE "${ZIG_INCLUDE_DIR}")
+foreach(target zigmath_demo zigmath_demo_cpp)
+    target_link_libraries(${target} PRIVATE zigmath)
+    target_include_directories(${target} PRIVATE "${ZIG_INCLUDE_DIR}")
 
-# 运行时能找到 .so：构建/安装时都把 zig-out/lib 写进 RPATH
-set_target_properties(zigmath_demo PROPERTIES
-    BUILD_RPATH "${ZIG_OUTPUT_DIR}/lib"
-    INSTALL_RPATH "${ZIG_OUTPUT_DIR}/lib"
-    BUILD_WITH_INSTALL_RPATH FALSE
-)
+    # 运行时能找到 .so：构建/安装时都把 zig-out/lib 写进 RPATH
+    set_target_properties(${target} PROPERTIES
+        BUILD_RPATH "${ZIG_OUTPUT_DIR}/lib"
+        INSTALL_RPATH "${ZIG_OUTPUT_DIR}/lib"
+        BUILD_WITH_INSTALL_RPATH FALSE
+    )
+endforeach()
 
 # ---------------------------------------------------------------------------
 # 4) 安装规则（可选）
 # ---------------------------------------------------------------------------
 include(GNUInstallDirs)
-install(TARGETS zigmath_demo RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(TARGETS zigmath_demo zigmath_demo_cpp RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES "${ZIG_LIB_PATH}" DESTINATION ${CMAKE_INSTALL_LIBDIR})
 install(DIRECTORY "${ZIG_INCLUDE_DIR}/" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})

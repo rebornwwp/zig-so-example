@@ -12,6 +12,7 @@ zig-so-example/
 ├── include/zigmath.h      # 手写的 C 头文件
 ├── CMakeLists.txt         # 包装 C 程序，自动触发 zig build 并链接 .so
 ├── c/main.c               # C 调用方示例
+├── c/main.cpp             # C++ 调用方示例（验证 extern "C" 头文件）
 ├── cmake-build/           # CMake 构建目录
 └── zig-out/               # Zig 构建产物
     ├── include/zigmath.h
@@ -38,6 +39,7 @@ zig build -Doptimize=ReleaseSafe
 cmake -S . -B cmake-build -DCMAKE_BUILD_TYPE=Release
 cmake --build cmake-build -j
 ./cmake-build/zigmath_demo
+./cmake-build/zigmath_demo_cpp   # C++ 调用方，输出同上（仅 "C++ caller" 不同）
 ```
 
 安装（可选）：
@@ -45,9 +47,10 @@ cmake --build cmake-build -j
 ```bash
 cmake --install cmake-build --prefix /path/to/prefix
 /path/to/prefix/bin/zigmath_demo
+/path/to/prefix/bin/zigmath_demo_cpp
 ```
 
-安装内容包括 `bin/zigmath_demo`、`lib/libzigmath.so`、`include/zigmath.h`。
+安装内容包括 `bin/zigmath_demo`、`bin/zigmath_demo_cpp`、`lib/libzigmath.so`、`include/zigmath.h`。
 
 ## 或者直接用 gcc 编译并运行 C 程序
 
@@ -76,6 +79,32 @@ Hello, C caller! This string came from Zig.
 ```bash
 LD_LIBRARY_PATH=zig-out/lib ./c/main
 ```
+
+## C++ 调用方
+
+头文件里有 `#ifdef __cplusplus extern "C" { ... }`，所以 C++ 程序可以直接 include 并链接这个 C ABI 动态库：
+
+```bash
+g++ c/main.cpp \
+  -Izig-out/include \
+  -Lzig-out/lib \
+  -lzigmath \
+  -Wl,-rpath,'$ORIGIN/../zig-out/lib' \
+  -o c/main_cpp
+
+./c/main_cpp
+```
+
+预期输出（最后一行是 `C++ caller`）：
+
+```
+zigmath version: 1
+10 + 20 = 30
+sum([1..5]) = 15
+Hello, C++ caller! This string came from Zig.
+```
+
+`zm_greet` 返回的字符串由 Zig 侧的 `c_allocator` 分配，示例里用 `std::unique_ptr` 配合自定义删除器 `zm_string_free`，保证退出时自动释放。
 
 ## 也可以不用 build.zig，直接命令行编译
 
