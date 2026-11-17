@@ -1,5 +1,7 @@
 # Zig 动态库（.so）供 C 调用示例
 
+[English](README_EN.md)
+
 ## 目录结构
 
 ```
